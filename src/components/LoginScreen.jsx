@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { loginUser } from '../services/syncService';
+import { PinInput } from './ui/PinInput';
 import { Lock, Loader2, ArrowLeft } from 'lucide-react';
 
 export function LoginScreen() {
@@ -21,7 +22,6 @@ export function LoginScreen() {
     try {
       const data = await loginUser(pin);
 
-      // Restore all user data
       dispatch({ type: 'SET_USER_ID', payload: data.userId });
       if (data.profile) {
         dispatch({ type: 'SET_MY_PROFILE', payload: data.profile });
@@ -53,45 +53,13 @@ export function LoginScreen() {
         <h2 className="font-serif text-2xl text-white mb-2">Welcome Back</h2>
         <p className="text-muted text-sm mb-6">Enter your 6-digit PIN to log in</p>
 
-        <div className="flex justify-center gap-2 mb-4">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <div
-              key={i}
-              className={`w-12 h-14 rounded-lg border-2 flex items-center justify-center text-2xl font-mono transition-colors ${
-                pin[i]
-                  ? 'border-amber bg-amber/10 text-white'
-                  : 'border-border bg-card text-muted'
-              }`}
-            >
-              {pin[i] ? '•' : ''}
-            </div>
-          ))}
+        <div className="mb-6">
+          <PinInput
+            value={pin}
+            onChange={(v) => { setPin(v); setError(''); }}
+            onSubmit={handleLogin}
+          />
         </div>
-
-        <input
-          type="tel"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          maxLength={6}
-          value={pin}
-          onChange={(e) => {
-            const v = e.target.value.replace(/\D/g, '').slice(0, 6);
-            setPin(v);
-            setError('');
-          }}
-          className="sr-only"
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && pin.length === 6) handleLogin();
-          }}
-        />
-
-        <button
-          onClick={() => document.querySelector('input[type="tel"]')?.focus()}
-          className="text-xs text-muted mb-4 block mx-auto"
-        >
-          Tap to type PIN
-        </button>
 
         {error && <p className="text-sm text-danger mb-4">{error}</p>}
 

@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { disambiguateName, generateCompleteProfile } from '../services/api';
 import { registerUser } from '../services/syncService';
 import { Avatar } from './ui/Avatar';
+import { PinInput } from './ui/PinInput';
 import { Search, Loader2, ChevronRight, Check, SkipForward, User, Lock } from 'lucide-react';
 
 export function OnboardingScreen() {
@@ -266,46 +267,13 @@ export function OnboardingScreen() {
             Choose a 6-digit PIN to save your profile and log in later on any device.
           </p>
 
-          <div className="flex justify-center gap-2 mb-4">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className={`w-12 h-14 rounded-lg border-2 flex items-center justify-center text-2xl font-mono transition-colors ${
-                  pin[i]
-                    ? 'border-amber bg-amber/10 text-white'
-                    : 'border-border bg-card text-muted'
-                }`}
-              >
-                {pin[i] ? '•' : ''}
-              </div>
-            ))}
+          <div className="mb-6">
+            <PinInput
+              value={pin}
+              onChange={(v) => { setPin(v); setPinError(''); }}
+              onSubmit={handlePinSubmit}
+            />
           </div>
-
-          <input
-            type="tel"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={6}
-            value={pin}
-            onChange={(e) => {
-              const v = e.target.value.replace(/\D/g, '').slice(0, 6);
-              setPin(v);
-              setPinError('');
-            }}
-            className="sr-only"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && pin.length === 6) handlePinSubmit();
-            }}
-          />
-
-          {/* Visible tap target to focus the hidden input */}
-          <button
-            onClick={() => document.querySelector('input[type="tel"]')?.focus()}
-            className="text-xs text-muted mb-4 block mx-auto"
-          >
-            Tap to type PIN
-          </button>
 
           {pinError && <p className="text-sm text-danger mb-4">{pinError}</p>}
 
