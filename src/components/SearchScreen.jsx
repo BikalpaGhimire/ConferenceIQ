@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { disambiguateName, generateCompleteProfile } from '../services/api';
+import { disambiguateName } from '../services/api';
 import { Avatar } from './ui/Avatar';
 import { FileUploader } from './FileUploader';
 import { PasteModal } from './PasteModal';
@@ -25,7 +25,6 @@ export function SearchScreen() {
     try {
       const candidates = await disambiguateName(query, hints, state.myProfile);
 
-      // Abort if a newer search started
       if (searchId.current !== thisSearch) return;
 
       if (!candidates || candidates.length === 0) {
@@ -34,67 +33,16 @@ export function SearchScreen() {
         return;
       }
 
-      dispatch({
-        type: 'ADD_RECENT_SEARCH',
-        payload: {
-          name: query,
-          institution: candidates[0]?.institution || '',
-          timestamp: Date.now(),
-        },
-      });
-
-      if (candidates.length === 1 && (candidates[0].confidence_score ?? 0) >= 0.8) {
-        await loadProfile(candidates[0], thisSearch);
-      } else {
-        dispatch({ type: 'SET_CANDIDATES', payload: candidates });
-        dispatch({ type: 'SET_VIEW', payload: 'disambiguation' });
-      }
+      // Always show disambiguation — let user confirm the person
+      dispatch({ type: 'SET_CANDIDATES', payload: candidates });
+      dispatch({ type: 'SET_VIEW', payload: 'disambiguation' });
     } catch (err) {
       if (searchId.current !== thisSearch) return;
       dispatch({ type: 'SET_ERROR', payload: err.message });
     } finally {
       if (searchId.current === thisSearch) setLoading(false);
     }
-  }, [dispatch]);
-
-  const loadProfile = async (candidate, reqId) => {
-    dispatch({ type: 'SET_VIEW', payload: 'profile' });
-    dispatch({
-      type: 'SET_PROFILE_LOADING',
-      payload: { quickCard: true, research: true, media: true, values: true },
-    });
-
-    // Show candidate data immediately as placeholder
-    dispatch({
-      type: 'SET_CURRENT_PROFILE',
-      payload: { quick_card: candidate, _savedAt: Date.now() },
-    });
-
-    const generatedForUser = state.myProfile?.quick_card?.full_name || null;
-
-    // Step 1: Quick Card (fast, show immediately)
-    const { quickCard, fullProfile } = await generateCompleteProfile(
-      candidate.full_name,
-      candidate.institution,
-      state.myProfile
-    );
-
-    if (reqId && searchId.current !== reqId) return;
-
-    if (quickCard) {
-      dispatch({
-        type: 'SET_CURRENT_PROFILE',
-        payload: { quick_card: quickCard, _savedAt: Date.now(), _generatedForUser: generatedForUser, ...(fullProfile || {}) },
-      });
-    } else if (fullProfile) {
-      dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: { ...fullProfile, _generatedForUser: generatedForUser } });
-    }
-
-    dispatch({
-      type: 'SET_PROFILE_LOADING',
-      payload: { quickCard: false, research: false, media: false, values: false },
-    });
-  };
+  }, [dispatch, state.myProfile]);
 
   const handleSearch = (e) => {
     e?.preventDefault();

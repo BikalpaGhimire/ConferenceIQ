@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { generateCompleteProfile } from '../services/api';
+import { generateQuickCard, generateFullProfile } from '../services/api';
 import { Avatar } from './ui/Avatar';
 import { SkeletonCard } from './ui/Skeleton';
 import { ArrowLeft, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
@@ -12,12 +12,6 @@ export function DisambiguationScreen() {
   const handleSelect = async (candidate) => {
     setLoadingName(candidate.full_name);
 
-    dispatch({ type: 'SET_VIEW', payload: 'profile' });
-    dispatch({
-      type: 'SET_PROFILE_LOADING',
-      payload: { quickCard: true, research: true, media: true, values: true },
-    });
-
     dispatch({
       type: 'ADD_RECENT_SEARCH',
       payload: {
@@ -27,33 +21,55 @@ export function DisambiguationScreen() {
       },
     });
 
-    // Show candidate data immediately
+    // Switch to profile view with all panels loading
+    dispatch({ type: 'SET_VIEW', payload: 'profile' });
+    dispatch({
+      type: 'SET_PROFILE_LOADING',
+      payload: { quickCard: true, research: true, media: true, values: true },
+    });
+
+    // Show candidate data as immediate placeholder
     dispatch({
       type: 'SET_CURRENT_PROFILE',
       payload: { quick_card: candidate, _savedAt: Date.now() },
     });
 
-    // Fire both in parallel for speed
-    const { quickCard, fullProfile } = await generateCompleteProfile(
-      candidate.full_name,
-      candidate.institution,
-      state.myProfile
-    );
-
     const generatedForUser = state.myProfile?.quick_card?.full_name || null;
 
-    if (quickCard) {
-      dispatch({
-        type: 'SET_CURRENT_PROFILE',
-        payload: { quick_card: quickCard, _savedAt: Date.now(), _generatedForUser: generatedForUser, ...(fullProfile || {}) },
-      });
-    } else if (fullProfile) {
-      dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: { ...fullProfile, _generatedForUser: generatedForUser } });
+    // Step 1: Quick Card (fast) — update UI as soon as it's ready
+    try {
+      const quickCard = await generateQuickCard(
+        candidate.full_name,
+        candidate.institution,
+        state.myProfile
+      );
+      if (quickCard) {
+        dispatch({
+          type: 'SET_CURRENT_PROFILE',
+          payload: { quick_card: quickCard, _savedAt: Date.now(), _generatedForUser: generatedForUser },
+        });
+      }
+    } catch {
+      // Keep candidate data as fallback
     }
+    dispatch({ type: 'SET_PROFILE_LOADING', payload: { quickCard: false } });
 
+    // Step 2: Full Profile (heavy) — panels populate when this returns
+    try {
+      const fullProfile = await generateFullProfile(
+        candidate.full_name,
+        candidate.institution,
+        state.myProfile
+      );
+      if (fullProfile) {
+        dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: { ...fullProfile, _generatedForUser: generatedForUser } });
+      }
+    } catch {
+      // Panels will show "no data found" — that's fine
+    }
     dispatch({
       type: 'SET_PROFILE_LOADING',
-      payload: { quickCard: false, research: false, media: false, values: false },
+      payload: { research: false, media: false, values: false },
     });
   };
 
@@ -74,6 +90,10 @@ export function DisambiguationScreen() {
         </h2>
         <span className="text-sm text-muted">{(state.candidates || []).length} found</span>
       </div>
+
+      <p className="text-sm text-muted text-center mb-4">
+        Select the right person to view their full profile
+      </p>
 
       {/* Candidate Cards */}
       <div className="space-y-3">

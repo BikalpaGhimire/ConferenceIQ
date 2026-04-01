@@ -114,12 +114,6 @@ export async function generateFullProfile(name, institution = '', myProfile = nu
   return parseJsonFromResponse(text);
 }
 
-// Generate Quick Card first (fast), then Full Profile (heavy) — sequential to avoid rate limits
-export async function generateCompleteProfile(name, institution = '', myProfile = null) {
-  const quickCard = await generateQuickCard(name, institution, myProfile).catch(() => null);
-  const fullProfile = await generateFullProfile(name, institution, myProfile).catch(() => null);
-  return { quickCard, fullProfile };
-}
 
 // Extract names from uploaded schedule
 export async function extractScheduleNames(fileBase64, fileType) {

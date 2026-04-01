@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
-import { disambiguateName, generateCompleteProfile } from '../services/api';
+import { disambiguateName, generateQuickCard, generateFullProfile } from '../services/api';
 import { registerUser } from '../services/syncService';
 import { Avatar } from './ui/Avatar';
 import { PinInput } from './ui/PinInput';
@@ -51,10 +51,8 @@ export function OnboardingScreen() {
     setLoading(true);
 
     try {
-      const { quickCard, fullProfile } = await generateCompleteProfile(
-        candidate.full_name,
-        candidate.institution
-      );
+      const quickCard = await generateQuickCard(candidate.full_name, candidate.institution).catch(() => null);
+      const fullProfile = await generateFullProfile(candidate.full_name, candidate.institution).catch(() => null);
 
       const profile = {
         quick_card: quickCard || candidate,
