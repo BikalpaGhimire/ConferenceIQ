@@ -179,7 +179,16 @@ function appReducer(state, action) {
       const filtered = state.recentSearches.filter(
         (r) => r.name !== entry.name
       );
-      const recentSearches = [entry, ...filtered].slice(0, 10);
+      const recentSearches = [entry, ...filtered].slice(0, 20);
+      saveToStorage('recentSearches', recentSearches);
+      return { ...state, recentSearches };
+    }
+
+    case 'UPDATE_RECENT_SEARCH_PROFILE': {
+      const { name, profile } = action.payload;
+      const recentSearches = state.recentSearches.map((r) =>
+        r.name === name ? { ...r, profile, timestamp: Date.now() } : r
+      );
       saveToStorage('recentSearches', recentSearches);
       return { ...state, recentSearches };
     }

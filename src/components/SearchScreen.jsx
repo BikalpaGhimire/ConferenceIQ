@@ -50,6 +50,17 @@ export function SearchScreen() {
   };
 
   const handleRecentClick = (recent) => {
+    // If we have cached profile data, load it directly — no API call
+    if (recent.profile?.quick_card) {
+      dispatch({ type: 'SET_CURRENT_PROFILE', payload: recent.profile });
+      dispatch({
+        type: 'SET_PROFILE_LOADING',
+        payload: { quickCard: false, research: false, media: false, values: false },
+      });
+      dispatch({ type: 'SET_VIEW', payload: 'profile' });
+      return;
+    }
+    // Otherwise, re-search
     dispatch({ type: 'SET_SEARCH_QUERY', payload: recent.name });
     runSearch(recent.name, state.contextHints);
   };

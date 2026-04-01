@@ -35,6 +35,7 @@ export function DisambiguationScreen() {
     });
 
     const generatedForUser = state.myProfile?.quick_card?.full_name || null;
+    let builtProfile = { quick_card: candidate, _savedAt: Date.now(), _generatedForUser: generatedForUser };
 
     // Step 1: Quick Card (fast) — update UI as soon as it's ready
     try {
@@ -44,10 +45,8 @@ export function DisambiguationScreen() {
         state.myProfile
       );
       if (quickCard) {
-        dispatch({
-          type: 'SET_CURRENT_PROFILE',
-          payload: { quick_card: quickCard, _savedAt: Date.now(), _generatedForUser: generatedForUser },
-        });
+        builtProfile = { ...builtProfile, quick_card: quickCard };
+        dispatch({ type: 'SET_CURRENT_PROFILE', payload: builtProfile });
       }
     } catch {
       // Keep candidate data as fallback
@@ -62,11 +61,19 @@ export function DisambiguationScreen() {
         state.myProfile
       );
       if (fullProfile) {
-        dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: { ...fullProfile, _generatedForUser: generatedForUser } });
+        builtProfile = { ...builtProfile, ...fullProfile, _generatedForUser: generatedForUser };
+        dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: fullProfile });
       }
     } catch {
-      // Panels will show "no data found" — that's fine
+      // Panels will show "no data found"
     }
+
+    // Cache full profile in recent searches so reopening doesn't re-fetch
+    dispatch({
+      type: 'UPDATE_RECENT_SEARCH_PROFILE',
+      payload: { name: candidate.full_name, profile: builtProfile },
+    });
+
     dispatch({
       type: 'SET_PROFILE_LOADING',
       payload: { research: false, media: false, values: false },
