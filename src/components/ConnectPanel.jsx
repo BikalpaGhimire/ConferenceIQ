@@ -48,7 +48,7 @@ export function ConnectPanel() {
   const handleDraftEmail = async () => {
     setDrafting(true);
     try {
-      const email = await generateFollowUpEmail(profile, noteText);
+      const email = await generateFollowUpEmail(profile, noteText, '', state.myProfile);
       setDraftEmail(email);
     } catch (err) {
       dispatch({ type: 'SET_ERROR', payload: 'Failed to draft email: ' + err.message });

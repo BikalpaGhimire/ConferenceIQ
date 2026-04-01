@@ -25,6 +25,14 @@ export function loadRecentSearches() {
   return loadFromStorage('recentSearches', []);
 }
 
+export function loadMyProfile() {
+  return loadFromStorage('myProfile', null);
+}
+
+export function saveMyProfile(profile) {
+  saveToStorage('myProfile', profile);
+}
+
 export function isProfileSaved(savedProfiles, name) {
   return savedProfiles.some((p) => p.quick_card?.full_name === name);
 }

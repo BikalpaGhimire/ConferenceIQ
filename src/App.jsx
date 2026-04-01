@@ -4,12 +4,25 @@ import { DisambiguationScreen } from './components/DisambiguationScreen';
 import { ProfileView } from './components/ProfileView';
 import { ScheduleView } from './components/ScheduleView';
 import { SavedProfiles } from './components/SavedProfiles';
+import { OnboardingScreen } from './components/OnboardingScreen';
+import { MyProfileView } from './components/MyProfileView';
 import { ErrorBanner } from './components/ui/ErrorBanner';
-import { Bookmark, Search } from 'lucide-react';
+import { Avatar } from './components/ui/Avatar';
+import { Bookmark, Search, UserCircle } from 'lucide-react';
 
 export default function App() {
   const { state, dispatch } = useApp();
-  const { currentView, error } = state;
+  const { currentView, error, onboardingComplete, myProfile } = state;
+
+  // Gate: show onboarding if not complete
+  if (!onboardingComplete) {
+    return (
+      <div className="min-h-screen bg-navy">
+        <ErrorBanner message={error} onDismiss={() => dispatch({ type: 'CLEAR_ERROR' })} />
+        <OnboardingScreen />
+      </div>
+    );
+  }
 
   const renderView = () => {
     switch (currentView) {
@@ -23,6 +36,10 @@ export default function App() {
         return <ScheduleView />;
       case 'saved':
         return <SavedProfiles />;
+      case 'my-profile':
+        return <MyProfileView />;
+      case 'onboarding':
+        return <OnboardingScreen />;
       default:
         return <SearchScreen />;
     }
@@ -58,7 +75,7 @@ export default function App() {
           </button>
           <button
             onClick={() => dispatch({ type: 'SET_VIEW', payload: 'saved' })}
-            className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors ${
+            className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors relative ${
               currentView === 'saved'
                 ? 'text-amber'
                 : 'text-muted hover:text-white'
@@ -71,6 +88,23 @@ export default function App() {
                 {state.savedProfiles.length}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => dispatch({ type: 'SET_VIEW', payload: 'my-profile' })}
+            className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors ${
+              currentView === 'my-profile'
+                ? 'text-amber'
+                : 'text-muted hover:text-white'
+            }`}
+          >
+            {myProfile?.quick_card?.full_name ? (
+              <div className="w-5 h-5 mb-1">
+                <Avatar name={myProfile.quick_card.full_name} size="sm" />
+              </div>
+            ) : (
+              <UserCircle className="w-5 h-5 mb-1" />
+            )}
+            Me
           </button>
         </div>
       </nav>

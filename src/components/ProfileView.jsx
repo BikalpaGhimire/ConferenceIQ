@@ -6,6 +6,7 @@ import { MediaPanel } from './MediaPanel';
 import { ValuesPanel } from './ValuesPanel';
 import { ConnectPanel } from './ConnectPanel';
 import { BriefingMode } from './BriefingMode';
+import { CommonGroundCard } from './CommonGroundCard';
 import { TabBar } from './ui/TabBar';
 import { SkeletonProfile } from './ui/Skeleton';
 import { ArrowLeft, Zap } from 'lucide-react';
@@ -81,6 +82,9 @@ export function ProfileView() {
 
       {/* Quick Card */}
       <QuickCard onOpenNotes={() => setShowNotes(!showNotes)} />
+
+      {/* Common Ground */}
+      <CommonGroundCard />
 
       {/* Tab Bar */}
       <div className="mt-6 px-4">

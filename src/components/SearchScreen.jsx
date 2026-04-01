@@ -23,7 +23,7 @@ export function SearchScreen() {
     dispatch({ type: 'CLEAR_ERROR' });
 
     try {
-      const candidates = await disambiguateName(query, hints);
+      const candidates = await disambiguateName(query, hints, state.myProfile);
 
       // Abort if a newer search started
       if (searchId.current !== thisSearch) return;
@@ -73,19 +73,22 @@ export function SearchScreen() {
     // Fire Quick Card + Full Profile in PARALLEL for speed
     const { quickCard, fullProfile } = await generateCompleteProfile(
       candidate.full_name,
-      candidate.institution
+      candidate.institution,
+      state.myProfile
     );
 
     // Abort if user started a different search
     if (reqId && searchId.current !== reqId) return;
 
+    const generatedForUser = state.myProfile?.quick_card?.full_name || null;
+
     if (quickCard) {
       dispatch({
         type: 'SET_CURRENT_PROFILE',
-        payload: { quick_card: quickCard, _savedAt: Date.now(), ...(fullProfile || {}) },
+        payload: { quick_card: quickCard, _savedAt: Date.now(), _generatedForUser: generatedForUser, ...(fullProfile || {}) },
       });
     } else if (fullProfile) {
-      dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: fullProfile });
+      dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: { ...fullProfile, _generatedForUser: generatedForUser } });
     }
 
     dispatch({
@@ -107,10 +110,23 @@ export function SearchScreen() {
   return (
     <div className="flex flex-col items-center px-4 pt-12 pb-8">
       {/* Logo */}
-      <div className="mb-8 text-center">
+      <div className="mb-6 text-center">
         <h1 className="font-serif text-4xl text-white mb-2">ConferenceIQ</h1>
         <p className="text-muted text-sm">Know anyone in 60 seconds</p>
       </div>
+
+      {/* Searching As badge */}
+      {state.myProfile?.quick_card?.full_name && (
+        <button
+          onClick={() => dispatch({ type: 'SET_VIEW', payload: 'my-profile' })}
+          className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-full mb-6 hover:border-amber/30 transition-colors"
+        >
+          <Avatar name={state.myProfile.quick_card.full_name} size="sm" />
+          <span className="text-xs text-muted">
+            Searching as <span className="text-white font-medium">{state.myProfile.quick_card.full_name}</span>
+          </span>
+        </button>
+      )}
 
       {/* Search Bar */}
       <form

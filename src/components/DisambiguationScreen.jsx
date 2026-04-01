@@ -36,16 +36,19 @@ export function DisambiguationScreen() {
     // Fire both in parallel for speed
     const { quickCard, fullProfile } = await generateCompleteProfile(
       candidate.full_name,
-      candidate.institution
+      candidate.institution,
+      state.myProfile
     );
+
+    const generatedForUser = state.myProfile?.quick_card?.full_name || null;
 
     if (quickCard) {
       dispatch({
         type: 'SET_CURRENT_PROFILE',
-        payload: { quick_card: quickCard, _savedAt: Date.now(), ...(fullProfile || {}) },
+        payload: { quick_card: quickCard, _savedAt: Date.now(), _generatedForUser: generatedForUser, ...(fullProfile || {}) },
       });
     } else if (fullProfile) {
-      dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: fullProfile });
+      dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: { ...fullProfile, _generatedForUser: generatedForUser } });
     }
 
     dispatch({

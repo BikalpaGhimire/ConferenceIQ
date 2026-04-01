@@ -144,6 +144,11 @@ export function QuickCard({ onOpenNotes }) {
           <h3 className="text-xs uppercase tracking-wider text-muted font-medium flex items-center gap-2 mb-3">
             <MessageSquareQuote className="w-4 h-4 text-amber" />
             Conversation Starters
+            {profile?._generatedForUser && (
+              <span className="px-1.5 py-0.5 bg-teal/10 text-teal text-[9px] rounded-full border border-teal/30 font-medium">
+                Personalized
+              </span>
+            )}
           </h3>
           <div className="space-y-3">
             {qc.conversation_starters.map((starter, i) => (

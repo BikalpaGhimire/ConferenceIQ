@@ -1,11 +1,15 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { loadSavedProfiles, loadRecentSearches, saveToStorage } from '../services/storage';
+import { loadSavedProfiles, loadRecentSearches, loadMyProfile, saveToStorage, saveMyProfile } from '../services/storage';
 
 const AppContext = createContext(null);
 
 const initialState = {
   // Navigation
-  currentView: 'search', // search | disambiguation | profile | schedule | saved
+  currentView: 'search', // search | disambiguation | profile | schedule | saved | my-profile | onboarding
+
+  // User Identity
+  myProfile: null,
+  onboardingComplete: false,
 
   // Search
   searchQuery: '',
@@ -46,6 +50,24 @@ function appReducer(state, action) {
     case 'SET_VIEW':
       return { ...state, currentView: action.payload, error: null };
 
+    // User Identity
+    case 'SET_MY_PROFILE': {
+      saveMyProfile(action.payload);
+      return { ...state, myProfile: action.payload };
+    }
+
+    case 'SET_ONBOARDING_COMPLETE': {
+      saveToStorage('onboardingComplete', action.payload);
+      return { ...state, onboardingComplete: action.payload };
+    }
+
+    case 'UPDATE_MY_PROFILE': {
+      const updated = { ...state.myProfile, ...action.payload };
+      saveMyProfile(updated);
+      return { ...state, myProfile: updated };
+    }
+
+    // Search
     case 'SET_SEARCH_QUERY':
       return { ...state, searchQuery: action.payload };
 
@@ -180,10 +202,18 @@ export function AppProvider({ children }) {
     const savedProfiles = loadSavedProfiles();
     const recentSearches = loadRecentSearches();
     const notes = JSON.parse(localStorage.getItem('conferenceiq_notes') || '{}');
+    const myProfile = loadMyProfile();
+    const onboardingComplete = JSON.parse(localStorage.getItem('conferenceiq_onboardingComplete') || 'false');
 
     dispatch({ type: 'SET_SAVED_PROFILES', payload: savedProfiles });
     dispatch({ type: 'SET_RECENT_SEARCHES', payload: recentSearches });
     dispatch({ type: 'SET_NOTES', payload: notes });
+    if (myProfile) {
+      dispatch({ type: 'SET_MY_PROFILE', payload: myProfile });
+    }
+    if (onboardingComplete) {
+      dispatch({ type: 'SET_ONBOARDING_COMPLETE', payload: true });
+    }
   }, []);
 
   return (

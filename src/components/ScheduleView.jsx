@@ -46,7 +46,7 @@ export function ScheduleView() {
         const candidates = await disambiguateName(name, {
           institution: entry.affiliation || '',
           conference: scheduleSource,
-        });
+        }, state.myProfile);
 
         if (!candidates || candidates.length === 0) {
           setFailed((prev) => [...prev, name]);
@@ -62,7 +62,8 @@ export function ScheduleView() {
         // Parallel Quick Card + Full Profile
         const { quickCard, fullProfile } = await generateCompleteProfile(
           best.full_name,
-          best.institution
+          best.institution,
+          state.myProfile
         );
 
         const profile = {

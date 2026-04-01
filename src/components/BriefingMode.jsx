@@ -5,10 +5,10 @@ export function BriefingMode({ profile, onClose }) {
   const qc = profile?.quick_card;
   const values = profile?.values_and_style;
   const research = profile?.research;
+  const cg = profile?.common_ground;
 
   if (!qc) return null;
 
-  // Pick the most recent notable thing
   const recentHighlight =
     research?.recent_papers?.[0]?.title ||
     profile?.media?.news_mentions?.[0]?.headline ||
@@ -22,12 +22,16 @@ export function BriefingMode({ profile, onClose }) {
 
   const bestStarter = qc.conversation_starters?.[0] || '';
 
+  const commonGroundSummary = cg?.potential_synergies?.[0] || '';
+
+  const dontSay = (values?.dont_say || []).filter(Boolean);
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-navy-light rounded-2xl p-8 w-full max-w-md border border-amber/20 shadow-2xl"
+        className="bg-navy-light rounded-2xl p-8 w-full max-w-md border border-amber/20 shadow-2xl max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2 text-amber">
@@ -56,6 +60,9 @@ export function BriefingMode({ profile, onClose }) {
             <BriefingLine label="RECENTLY" value={recentHighlight} />
           )}
           {causes && <BriefingLine label="VALUES" value={causes} />}
+          {commonGroundSummary && (
+            <BriefingLine label="IN COMMON" value={commonGroundSummary} color="teal" />
+          )}
         </div>
 
         {bestStarter && (
@@ -69,6 +76,23 @@ export function BriefingMode({ profile, onClose }) {
           </div>
         )}
 
+        {dontSay.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-xs text-danger/80 uppercase tracking-wider font-medium mb-2">
+              AVOID
+            </p>
+            {dontSay.map((topic, i) => (
+              <p key={i} className="text-sm text-danger/60">{topic}</p>
+            ))}
+          </div>
+        )}
+
+        {dontSay.length === 0 && (
+          <p className="mt-4 text-xs text-teal/60 italic">
+            Nothing controversial found — you're good!
+          </p>
+        )}
+
         <button
           onClick={onClose}
           className="w-full mt-6 py-3 bg-amber/10 text-amber rounded-xl text-sm font-medium hover:bg-amber/20 transition-colors"
@@ -80,10 +104,15 @@ export function BriefingMode({ profile, onClose }) {
   );
 }
 
-function BriefingLine({ label, value }) {
+function BriefingLine({ label, value, color = 'amber' }) {
+  const colors = {
+    amber: 'text-amber',
+    teal: 'text-teal',
+  };
+
   return (
     <div className="flex gap-3">
-      <span className="text-xs text-amber font-mono font-bold w-20 shrink-0 mt-0.5">
+      <span className={`text-xs ${colors[color]} font-mono font-bold w-20 shrink-0 mt-0.5`}>
         {label}
       </span>
       <p className="text-sm text-gray-300 leading-relaxed">{value}</p>

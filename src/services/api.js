@@ -37,11 +37,6 @@ async function callClaude({ system, userMessage, tools = [], maxTokens = 4096, c
 
   const data = await response.json();
 
-  // Handle tool_use responses: when stop_reason is "tool_use", the model used
-  // web_search but hasn't produced a final text response yet. For server-side
-  // tools like web_search, Anthropic handles the tool execution internally
-  // and returns the final text. But if we somehow get end_turn with no text,
-  // handle gracefully.
   if (!data?.content || !Array.isArray(data.content)) {
     throw new Error('Unexpected API response format');
   }
@@ -52,7 +47,6 @@ async function callClaude({ system, userMessage, tools = [], maxTokens = 4096, c
 function extractTextFromResponse(response) {
   if (!response?.content || !Array.isArray(response.content)) return '';
 
-  // Extract text blocks (primary content)
   const textParts = response.content
     .filter((block) => block.type === 'text')
     .map((block) => block.text);
@@ -61,8 +55,6 @@ function extractTextFromResponse(response) {
     return textParts.join('\n');
   }
 
-  // If no text blocks found, check for tool results that might contain text
-  // (shouldn't happen with server-side web_search, but defensive)
   return '';
 }
 
@@ -72,8 +64,8 @@ const webSearchTool = {
 };
 
 // Step 1: Disambiguate a name
-export async function disambiguateName(name, hints = {}) {
-  const { system, user } = getDisambiguationPrompt(name, hints);
+export async function disambiguateName(name, hints = {}, myProfile = null) {
+  const { system, user } = getDisambiguationPrompt(name, hints, myProfile);
   const response = await callClaude({
     system,
     userMessage: user,
@@ -84,15 +76,14 @@ export async function disambiguateName(name, hints = {}) {
   const text = extractTextFromResponse(response);
   const result = parseJsonFromResponse(text);
 
-  // Ensure we always return an array
   if (Array.isArray(result)) return result;
   if (result && typeof result === 'object') return [result];
   return [];
 }
 
 // Step 2: Generate Quick Card
-export async function generateQuickCard(name, institution = '') {
-  const { system, user } = getQuickCardPrompt(name, institution);
+export async function generateQuickCard(name, institution = '', myProfile = null) {
+  const { system, user } = getQuickCardPrompt(name, institution, myProfile);
   const response = await callClaude({
     system,
     userMessage: user,
@@ -104,9 +95,9 @@ export async function generateQuickCard(name, institution = '') {
   return parseJsonFromResponse(text);
 }
 
-// Step 3: Generate full profile (research + media + values + connect)
-export async function generateFullProfile(name, institution = '') {
-  const { system, user } = getFullProfilePrompt(name, institution);
+// Step 3: Generate full profile (research + media + values + connect + common_ground)
+export async function generateFullProfile(name, institution = '', myProfile = null) {
+  const { system, user } = getFullProfilePrompt(name, institution, myProfile);
   const response = await callClaude({
     system,
     userMessage: user,
@@ -119,10 +110,10 @@ export async function generateFullProfile(name, institution = '') {
 }
 
 // Generate Quick Card + Full Profile in parallel for speed
-export async function generateCompleteProfile(name, institution = '') {
+export async function generateCompleteProfile(name, institution = '', myProfile = null) {
   const [quickCard, fullProfile] = await Promise.all([
-    generateQuickCard(name, institution).catch(() => null),
-    generateFullProfile(name, institution).catch(() => null),
+    generateQuickCard(name, institution, myProfile).catch(() => null),
+    generateFullProfile(name, institution, myProfile).catch(() => null),
   ]);
   return { quickCard, fullProfile };
 }
@@ -158,8 +149,8 @@ export async function extractScheduleNames(fileBase64, fileType) {
 }
 
 // Generate follow-up email
-export async function generateFollowUpEmail(profile, notes, conference = '') {
-  const { system, user } = getFollowUpEmailPrompt(profile, notes, conference);
+export async function generateFollowUpEmail(profile, notes, conference = '', myProfile = null) {
+  const { system, user } = getFollowUpEmailPrompt(profile, notes, conference, myProfile);
   const response = await callClaude({
     system,
     userMessage: user,
