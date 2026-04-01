@@ -5,7 +5,10 @@ const AppContext = createContext(null);
 
 const initialState = {
   // Navigation
-  currentView: 'search', // search | disambiguation | profile | schedule | saved | my-profile | onboarding
+  currentView: 'search', // search | disambiguation | profile | schedule | saved | my-profile | onboarding | login
+
+  // Auth
+  userId: null,
 
   // User Identity
   myProfile: null,
@@ -49,6 +52,22 @@ function appReducer(state, action) {
   switch (action.type) {
     case 'SET_VIEW':
       return { ...state, currentView: action.payload, error: null };
+
+    // Auth
+    case 'SET_USER_ID': {
+      saveToStorage('userId', action.payload);
+      return { ...state, userId: action.payload };
+    }
+
+    case 'LOGOUT': {
+      localStorage.removeItem('conferenceiq_userId');
+      localStorage.removeItem('conferenceiq_myProfile');
+      localStorage.removeItem('conferenceiq_onboardingComplete');
+      localStorage.removeItem('conferenceiq_savedProfiles');
+      localStorage.removeItem('conferenceiq_notes');
+      localStorage.removeItem('conferenceiq_recentSearches');
+      return { ...initialState };
+    }
 
     // User Identity
     case 'SET_MY_PROFILE': {
@@ -204,6 +223,7 @@ export function AppProvider({ children }) {
     const notes = JSON.parse(localStorage.getItem('conferenceiq_notes') || '{}');
     const myProfile = loadMyProfile();
     const onboardingComplete = JSON.parse(localStorage.getItem('conferenceiq_onboardingComplete') || 'false');
+    const userId = JSON.parse(localStorage.getItem('conferenceiq_userId') || 'null');
 
     dispatch({ type: 'SET_SAVED_PROFILES', payload: savedProfiles });
     dispatch({ type: 'SET_RECENT_SEARCHES', payload: recentSearches });
@@ -213,6 +233,9 @@ export function AppProvider({ children }) {
     }
     if (onboardingComplete) {
       dispatch({ type: 'SET_ONBOARDING_COMPLETE', payload: true });
+    }
+    if (userId) {
+      dispatch({ type: 'SET_USER_ID', payload: userId });
     }
   }, []);
 

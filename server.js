@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import Database from 'better-sqlite3';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -12,15 +14,135 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
-
-// Serve built frontend in production
 app.use(express.static(join(__dirname, 'dist')));
 
-// Proxy Anthropic API calls
+// --- Database Setup ---
+const db = new Database(join(__dirname, 'conferenceiq.db'));
+db.pragma('journal_mode = WAL');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    pin_hash TEXT NOT NULL,
+    name TEXT,
+    profile_json TEXT,
+    saved_profiles_json TEXT DEFAULT '[]',
+    notes_json TEXT DEFAULT '{}',
+    recent_searches_json TEXT DEFAULT '[]',
+    created_at INTEGER DEFAULT (unixepoch()),
+    updated_at INTEGER DEFAULT (unixepoch())
+  );
+`);
+
+function hashPin(pin) {
+  return crypto.createHash('sha256').update(pin).digest('hex');
+}
+
+function generateUserId() {
+  return crypto.randomBytes(8).toString('hex');
+}
+
+// --- Auth Endpoints ---
+
+// Register: create account with PIN
+app.post('/api/auth/register', (req, res) => {
+  const { pin, name, profile } = req.body;
+
+  if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+    return res.status(400).json({ error: 'PIN must be exactly 6 digits' });
+  }
+
+  const id = generateUserId();
+  const pinHash = hashPin(pin);
+
+  try {
+    db.prepare(`
+      INSERT INTO users (id, pin_hash, name, profile_json)
+      VALUES (?, ?, ?, ?)
+    `).run(id, pinHash, name || '', profile ? JSON.stringify(profile) : null);
+
+    res.json({ userId: id, name });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Login: verify PIN
+app.post('/api/auth/login', (req, res) => {
+  const { pin } = req.body;
+
+  if (!pin || pin.length !== 6) {
+    return res.status(400).json({ error: 'PIN must be 6 digits' });
+  }
+
+  const pinHash = hashPin(pin);
+  const user = db.prepare('SELECT * FROM users WHERE pin_hash = ?').get(pinHash);
+
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid PIN' });
+  }
+
+  res.json({
+    userId: user.id,
+    name: user.name,
+    profile: user.profile_json ? JSON.parse(user.profile_json) : null,
+    savedProfiles: JSON.parse(user.saved_profiles_json || '[]'),
+    notes: JSON.parse(user.notes_json || '{}'),
+    recentSearches: JSON.parse(user.recent_searches_json || '[]'),
+  });
+});
+
+// --- Data Sync Endpoints ---
+
+// Save user data (profile, saved profiles, notes, recent searches)
+app.post('/api/sync', (req, res) => {
+  const { userId, profile, savedProfiles, notes, recentSearches } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'userId required' });
+  }
+
+  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  const updates = [];
+  const params = [];
+
+  if (profile !== undefined) {
+    updates.push('profile_json = ?');
+    params.push(JSON.stringify(profile));
+  }
+  if (savedProfiles !== undefined) {
+    updates.push('saved_profiles_json = ?');
+    params.push(JSON.stringify(savedProfiles));
+  }
+  if (notes !== undefined) {
+    updates.push('notes_json = ?');
+    params.push(JSON.stringify(notes));
+  }
+  if (recentSearches !== undefined) {
+    updates.push('recent_searches_json = ?');
+    params.push(JSON.stringify(recentSearches));
+  }
+
+  if (updates.length === 0) {
+    return res.json({ ok: true });
+  }
+
+  updates.push('updated_at = unixepoch()');
+  params.push(userId);
+
+  db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+  res.json({ ok: true });
+});
+
+// --- Claude API Proxy ---
 app.post('/api/claude', async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set in .env' });
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set' });
   }
 
   try {
@@ -41,11 +163,11 @@ app.post('/api/claude', async (req, res) => {
   }
 });
 
-// SPA fallback (Express 5 requires named param for wildcards)
+// SPA fallback
 app.get('/{*splat}', (req, res) => {
   res.sendFile(join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(PORT, () => {
-  console.log(`ConferenceIQ API proxy running on http://localhost:${PORT}`);
+  console.log(`ConferenceIQ running on http://localhost:${PORT}`);
 });

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useApp } from './context/AppContext';
 import { SearchScreen } from './components/SearchScreen';
 import { DisambiguationScreen } from './components/DisambiguationScreen';
@@ -5,17 +6,48 @@ import { ProfileView } from './components/ProfileView';
 import { ScheduleView } from './components/ScheduleView';
 import { SavedProfiles } from './components/SavedProfiles';
 import { OnboardingScreen } from './components/OnboardingScreen';
+import { LoginScreen } from './components/LoginScreen';
 import { MyProfileView } from './components/MyProfileView';
 import { ErrorBanner } from './components/ui/ErrorBanner';
 import { Avatar } from './components/ui/Avatar';
+import { debouncedSync } from './services/syncService';
 import { Bookmark, Search, UserCircle } from 'lucide-react';
 
 export default function App() {
   const { state, dispatch } = useApp();
-  const { currentView, error, onboardingComplete, myProfile } = state;
+  const { currentView, error, onboardingComplete, myProfile, userId } = state;
 
-  // Gate: show onboarding if not complete
+  // Sync to server on data changes (debounced)
+  const prevSyncRef = useRef('');
+  useEffect(() => {
+    if (!userId) return;
+    const key = JSON.stringify({
+      p: state.myProfile?._savedAt,
+      s: state.savedProfiles.length,
+      n: Object.keys(state.notes).length,
+      r: state.recentSearches.length,
+    });
+    if (key === prevSyncRef.current) return;
+    prevSyncRef.current = key;
+
+    debouncedSync(userId, {
+      profile: state.myProfile,
+      savedProfiles: state.savedProfiles,
+      notes: state.notes,
+      recentSearches: state.recentSearches,
+    });
+  }, [userId, state.myProfile, state.savedProfiles, state.notes, state.recentSearches]);
+
+  // Gate: show onboarding or login if not complete
   if (!onboardingComplete) {
+    if (currentView === 'login') {
+      return (
+        <div className="min-h-screen bg-navy">
+          <ErrorBanner message={error} onDismiss={() => dispatch({ type: 'CLEAR_ERROR' })} />
+          <LoginScreen />
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-navy">
         <ErrorBanner message={error} onDismiss={() => dispatch({ type: 'CLEAR_ERROR' })} />
@@ -40,6 +72,8 @@ export default function App() {
         return <MyProfileView />;
       case 'onboarding':
         return <OnboardingScreen />;
+      case 'login':
+        return <LoginScreen />;
       default:
         return <SearchScreen />;
     }
