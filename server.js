@@ -29,10 +29,14 @@ db.exec(`
     saved_profiles_json TEXT DEFAULT '[]',
     notes_json TEXT DEFAULT '{}',
     recent_searches_json TEXT DEFAULT '[]',
+    last_view TEXT DEFAULT 'search',
     created_at INTEGER DEFAULT (unixepoch()),
     updated_at INTEGER DEFAULT (unixepoch())
   );
 `);
+
+// Migration: add last_view column if missing
+try { db.exec('ALTER TABLE users ADD COLUMN last_view TEXT DEFAULT "search"'); } catch {};
 
 function hashPin(pin) {
   return crypto.createHash('sha256').update(pin).digest('hex');
@@ -89,6 +93,7 @@ app.post('/api/auth/login', (req, res) => {
     savedProfiles: JSON.parse(user.saved_profiles_json || '[]'),
     notes: JSON.parse(user.notes_json || '{}'),
     recentSearches: JSON.parse(user.recent_searches_json || '[]'),
+    lastView: user.last_view || 'search',
   });
 });
 
@@ -96,7 +101,7 @@ app.post('/api/auth/login', (req, res) => {
 
 // Save user data (profile, saved profiles, notes, recent searches)
 app.post('/api/sync', (req, res) => {
-  const { userId, profile, savedProfiles, notes, recentSearches } = req.body;
+  const { userId, profile, savedProfiles, notes, recentSearches, lastView } = req.body;
 
   if (!userId) {
     return res.status(400).json({ error: 'userId required' });
@@ -125,6 +130,10 @@ app.post('/api/sync', (req, res) => {
   if (recentSearches !== undefined) {
     updates.push('recent_searches_json = ?');
     params.push(JSON.stringify(recentSearches));
+  }
+  if (lastView !== undefined) {
+    updates.push('last_view = ?');
+    params.push(lastView);
   }
 
   if (updates.length === 0) {

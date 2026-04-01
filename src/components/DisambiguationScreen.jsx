@@ -54,18 +54,29 @@ export function DisambiguationScreen() {
     dispatch({ type: 'SET_PROFILE_LOADING', payload: { quickCard: false } });
 
     // Step 2: Full Profile (heavy) — panels populate when this returns
-    try {
-      const fullProfile = await generateFullProfile(
-        candidate.full_name,
-        candidate.institution,
-        state.myProfile
-      );
-      if (fullProfile) {
-        builtProfile = { ...builtProfile, ...fullProfile, _generatedForUser: generatedForUser };
-        dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: fullProfile });
+    // Try up to 2 times if first attempt fails
+    let fullProfile = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        fullProfile = await generateFullProfile(
+          candidate.full_name,
+          candidate.institution,
+          state.myProfile
+        );
+        if (fullProfile) break;
+      } catch (err) {
+        if (attempt === 0 && err.message?.includes('rate limit')) {
+          // Wait 5s and retry once for rate limits
+          await new Promise((r) => setTimeout(r, 5000));
+        }
       }
-    } catch {
-      // Panels will show "no data found"
+    }
+
+    if (fullProfile) {
+      builtProfile = { ...builtProfile, ...fullProfile, _generatedForUser: generatedForUser };
+      dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: fullProfile });
+    } else {
+      dispatch({ type: 'SET_ERROR', payload: 'Could not load full profile. Try the Refresh button.' });
     }
 
     // Cache full profile in recent searches so reopening doesn't re-fetch

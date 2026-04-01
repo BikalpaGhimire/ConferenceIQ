@@ -60,13 +60,21 @@ export function ProfileView() {
     } catch { /* keep existing */ }
     dispatch({ type: 'SET_PROFILE_LOADING', payload: { quickCard: false } });
 
-    try {
-      const fullProfile = await generateFullProfile(name, institution, state.myProfile);
-      if (fullProfile) {
-        builtProfile = { ...builtProfile, ...fullProfile, _generatedForUser: generatedForUser };
-        dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: fullProfile });
+    let fullProfile = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        fullProfile = await generateFullProfile(name, institution, state.myProfile);
+        if (fullProfile) break;
+      } catch (err) {
+        if (attempt === 0 && err.message?.includes('rate limit')) {
+          await new Promise((r) => setTimeout(r, 5000));
+        }
       }
-    } catch { /* keep existing */ }
+    }
+    if (fullProfile) {
+      builtProfile = { ...builtProfile, ...fullProfile, _generatedForUser: generatedForUser };
+      dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: fullProfile });
+    }
 
     // Update cache in recent searches
     dispatch({

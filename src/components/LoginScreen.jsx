@@ -36,7 +36,10 @@ export function LoginScreen() {
         dispatch({ type: 'SET_RECENT_SEARCHES', payload: data.recentSearches });
       }
       dispatch({ type: 'SET_ONBOARDING_COMPLETE', payload: true });
-      dispatch({ type: 'SET_VIEW', payload: 'search' });
+      // Restore last view — but only safe views (not profile/disambiguation which need state)
+      const safeViews = ['search', 'saved', 'my-profile'];
+      const restoreView = safeViews.includes(data.lastView) ? data.lastView : 'search';
+      dispatch({ type: 'SET_VIEW', payload: restoreView });
     } catch (err) {
       setError(err.message || 'Invalid PIN');
     } finally {

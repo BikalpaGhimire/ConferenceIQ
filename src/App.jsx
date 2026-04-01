@@ -26,6 +26,7 @@ export default function App() {
       s: state.savedProfiles.length,
       n: Object.keys(state.notes).length,
       r: state.recentSearches.length,
+      v: currentView,
     });
     if (key === prevSyncRef.current) return;
     prevSyncRef.current = key;
@@ -35,8 +36,9 @@ export default function App() {
       savedProfiles: state.savedProfiles,
       notes: state.notes,
       recentSearches: state.recentSearches,
+      lastView: currentView,
     });
-  }, [userId, state.myProfile, state.savedProfiles, state.notes, state.recentSearches]);
+  }, [userId, state.myProfile, state.savedProfiles, state.notes, state.recentSearches, currentView]);
 
   // Gate: show onboarding or login if not complete
   if (!onboardingComplete) {

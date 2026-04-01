@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { generateQuickCard, generateFullProfile } from '../services/api';
 import { Avatar } from './ui/Avatar';
 import { Badge } from './ui/Badge';
-import { ArrowLeft, RefreshCw, Loader2, Edit3, Save, X } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, Edit3, Save, X, LogOut } from 'lucide-react';
 
 export function MyProfileView() {
   const { state, dispatch } = useApp();
@@ -197,6 +197,22 @@ export function MyProfileView() {
         {profile._savedAt && (
           <p className="text-[10px] text-muted mt-1">
             Last updated: {new Date(profile._savedAt).toLocaleDateString()}
+          </p>
+        )}
+      </div>
+
+      {/* Sign Out */}
+      <div className="mt-8 pt-6 border-t border-border">
+        <button
+          onClick={() => dispatch({ type: 'LOGOUT' })}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-danger/10 text-danger rounded-xl text-sm hover:bg-danger/20 transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          Sign Out
+        </button>
+        {state.userId && (
+          <p className="text-[10px] text-muted text-center mt-2">
+            Your data is saved. Log back in with your PIN anytime.
           </p>
         )}
       </div>
