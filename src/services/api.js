@@ -29,16 +29,21 @@ async function callClaude({ system, userMessage, tools = [], maxTokens = 4096, c
     body: JSON.stringify(body),
   });
 
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    const msg = err.error?.message || err.message || `API error (${response.status})`;
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || !data) {
+    // Anthropic errors: { type: "error", error: { type: "...", message: "..." } }
+    const msg = data?.error?.message || data?.message || `API error (${response.status})`;
+
+    if (response.status === 429 || msg.includes('rate limit')) {
+      throw new Error('Rate limited — please wait a moment and try again.');
+    }
+
     throw new Error(msg);
   }
 
-  const data = await response.json();
-
-  if (!data?.content || !Array.isArray(data.content)) {
-    throw new Error('Unexpected API response format');
+  if (!data.content || !Array.isArray(data.content)) {
+    throw new Error('Unexpected API response');
   }
 
   return data;
@@ -109,12 +114,10 @@ export async function generateFullProfile(name, institution = '', myProfile = nu
   return parseJsonFromResponse(text);
 }
 
-// Generate Quick Card + Full Profile in parallel for speed
+// Generate Quick Card first (fast), then Full Profile (heavy) — sequential to avoid rate limits
 export async function generateCompleteProfile(name, institution = '', myProfile = null) {
-  const [quickCard, fullProfile] = await Promise.all([
-    generateQuickCard(name, institution, myProfile).catch(() => null),
-    generateFullProfile(name, institution, myProfile).catch(() => null),
-  ]);
+  const quickCard = await generateQuickCard(name, institution, myProfile).catch(() => null);
+  const fullProfile = await generateFullProfile(name, institution, myProfile).catch(() => null);
   return { quickCard, fullProfile };
 }
 

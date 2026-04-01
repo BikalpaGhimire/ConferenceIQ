@@ -70,17 +70,16 @@ export function SearchScreen() {
       payload: { quick_card: candidate, _savedAt: Date.now() },
     });
 
-    // Fire Quick Card + Full Profile in PARALLEL for speed
+    const generatedForUser = state.myProfile?.quick_card?.full_name || null;
+
+    // Step 1: Quick Card (fast, show immediately)
     const { quickCard, fullProfile } = await generateCompleteProfile(
       candidate.full_name,
       candidate.institution,
       state.myProfile
     );
 
-    // Abort if user started a different search
     if (reqId && searchId.current !== reqId) return;
-
-    const generatedForUser = state.myProfile?.quick_card?.full_name || null;
 
     if (quickCard) {
       dispatch({
