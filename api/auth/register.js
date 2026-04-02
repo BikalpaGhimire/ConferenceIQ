@@ -1,5 +1,12 @@
-import { kv } from '@vercel/kv';
+import { createClient } from '@vercel/kv';
 import crypto from 'crypto';
+
+function getKV() {
+  return createClient({
+    url: process.env.KV_REST_API_URL,
+    token: process.env.KV_REST_API_TOKEN,
+  });
+}
 
 function hashPin(pin) {
   return crypto.createHash('sha256').update(pin).digest('hex');
@@ -18,11 +25,14 @@ export default async function handler(req, res) {
   const pinHash = hashPin(pin);
 
   try {
+    const kv = getKV();
+
+    // Store minimal user data (avoid storing huge profile objects)
     const userData = {
       id,
       pinHash,
       name: name || '',
-      profile: profile || null,
+      profile: profile ? { quick_card: profile.quick_card, _savedAt: profile._savedAt } : null,
       savedProfiles: [],
       notes: {},
       recentSearches: [],
@@ -30,13 +40,12 @@ export default async function handler(req, res) {
       createdAt: Date.now(),
     };
 
-    // Store user by ID
-    await kv.set(`user:${id}`, userData);
-    // Store pin→userId mapping for login
+    await kv.set(`user:${id}`, JSON.stringify(userData));
     await kv.set(`pin:${pinHash}`, id);
 
     res.json({ userId: id, name: name || '' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Register error:', err);
+    res.status(500).json({ error: err.message || 'Registration failed' });
   }
 }
