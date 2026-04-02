@@ -193,10 +193,11 @@ app.post('/api/cache', (req, res) => {
 });
 
 // --- Claude API Proxy ---
+// Supports BYOK: client can send x-custom-api-key header to use their own key
 app.post('/api/claude', async (req, res) => {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = req.headers['x-custom-api-key'] || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set' });
+    return res.status(500).json({ error: 'No API key available. Set your own key in Settings or contact the administrator.' });
   }
 
   try {

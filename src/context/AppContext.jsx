@@ -5,7 +5,7 @@ const AppContext = createContext(null);
 
 const initialState = {
   // Navigation
-  currentView: 'search', // search | disambiguation | profile | schedule | saved | my-profile | onboarding | login
+  currentView: 'search', // search | disambiguation | profile | schedule | saved | my-profile | settings | onboarding | login
 
   // Auth
   userId: null,

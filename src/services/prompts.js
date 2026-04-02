@@ -21,7 +21,7 @@ export function getDisambiguationPrompt(name, hints = {}, myProfile = null) {
   return {
     system: 'Find matching professionals and build a quick networking card for each. Be specific, never fabricate. Return ONLY valid JSON array, no fences.',
     user: `Find "${name}". ${ctx.join('. ')}.${userCtx}
-Return: [{"full_name":"","title":"","institution":"","department":"","field":"","location":"","h_index_approx":null,"distinguishing_detail":"","confidence_score":0.0,"bio_blurb":"(2-3 sentences)","education":[{"degree":"","institution":"","year":""}],"research_tags":[],"conversation_starters":["specific","specific","specific"]}]
+Return: [{"full_name":"","title":"","institution":"","department":"","field":"","location":"","h_index_approx":null,"distinguishing_detail":"","confidence_score":0.0,"bio_blurb":"(2-3 sentences)","education":[{"degree":"","institution":"","year":""}],"research_tags":[],"conversation_starters":["(MUST reference a specific paper title, finding, or method by name — e.g. 'Your 2019 Nature paper on X showed Y — how has that evolved?')","(MUST cite a concrete detail: a dataset, technique, or result — not generic)","(MUST tie a specific contribution to a broader discussion point)"]}]
 Max 5. Only JSON.`,
   };
 }
@@ -33,7 +33,7 @@ export function getFullProfilePrompt(name, institution = '', myProfile = null) {
     : '';
 
   return {
-    system: 'Build comprehensive profile for networking. Be specific, never fabricate. Omit empty sections. Return ONLY valid JSON, no fences.',
+    system: 'Build comprehensive profile for networking. Be specific, never fabricate. Omit empty sections. For talking_points: each must reference a specific paper, finding, method, or contribution by name — never generic. Return ONLY valid JSON, no fences.',
     user: `Full profile: ${name}${institution ? ` at ${institution}` : ''}.${userCtx}
 Return: {"research":{"impact_snapshot":{"approx_publications":0,"h_index_approx":0,"top_fields":[],"peak_period":""},"landmark_papers":[{"title":"","journal":"","year":"","approx_citations":0,"plain_english_summary":"","url":""}],"recent_papers":[{"title":"","journal":"","year":"","url":""}],"research_evolution":"","key_collaborators":[{"name":"","institution":"","joint_papers_approx":0}]},"media":{"news_mentions":[{"source":"","headline":"","date":"","url":""}],"talks":[{"event":"","title":"","year":""}],"social_profiles":[{"platform":"","handle":"","url":""}],"awards":[{"name":"","year":""}]},"values_and_style":{"causes_and_advocacy":[{"topic":"","evidence":""}],"professional_roles":[],"communication_style":"","talking_points":[],"dont_say":[]},"contact":{"email":"","lab_website":"","google_scholar_url":"","linkedin_url":""}${cgBlock}}
 Only JSON.`,

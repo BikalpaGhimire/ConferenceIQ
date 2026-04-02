@@ -8,6 +8,7 @@ import { SavedProfiles } from './components/SavedProfiles';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { MyProfileView } from './components/MyProfileView';
+import { SettingsView } from './components/SettingsView';
 import { ErrorBanner } from './components/ui/ErrorBanner';
 import { Avatar } from './components/ui/Avatar';
 import { debouncedSync } from './services/syncService';
@@ -72,6 +73,8 @@ export default function App() {
         return <SavedProfiles />;
       case 'my-profile':
         return <MyProfileView />;
+      case 'settings':
+        return <SettingsView />;
       case 'onboarding':
         return <OnboardingScreen />;
       case 'login':

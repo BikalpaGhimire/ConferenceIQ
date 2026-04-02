@@ -5,6 +5,23 @@ const API_URL = '/api/claude';
 const CACHE_URL = '/api/cache';
 const MODEL = 'claude-haiku-4-5-20251001';
 
+// BYOK: read user's custom API key from localStorage
+function getCustomApiKey() {
+  return localStorage.getItem('conferenceiq_customApiKey') || '';
+}
+
+export function setCustomApiKey(key) {
+  if (key) {
+    localStorage.setItem('conferenceiq_customApiKey', key);
+  } else {
+    localStorage.removeItem('conferenceiq_customApiKey');
+  }
+}
+
+export function getStoredApiKey() {
+  return getCustomApiKey();
+}
+
 // --- Rate-limit-aware request queue ---
 const queue = {
   lastCallTime: 0,
@@ -55,9 +72,15 @@ async function callClaude({ system, userMessage, tools = [], maxTokens = 4096, c
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     await waitForSlot();
 
+    const headers = { 'Content-Type': 'application/json' };
+    const customKey = getCustomApiKey();
+    if (customKey) {
+      headers['x-custom-api-key'] = customKey;
+    }
+
     const response = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(body),
     });
 
