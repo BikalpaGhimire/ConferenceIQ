@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { generateQuickCard, generateFullProfile } from '../services/api';
+import { generateFullProfile } from '../services/api';
 import { QuickCard } from './QuickCard';
 import { ResearchPanel } from './ResearchPanel';
 import { MediaPanel } from './MediaPanel';
@@ -51,15 +51,9 @@ export function ProfileView() {
     const generatedForUser = state.myProfile?.quick_card?.full_name || null;
     let builtProfile = { ...profile };
 
-    try {
-      const quickCard = await generateQuickCard(name, institution, state.myProfile);
-      if (quickCard) {
-        builtProfile = { ...builtProfile, quick_card: quickCard, _savedAt: Date.now(), _generatedForUser: generatedForUser };
-        dispatch({ type: 'SET_CURRENT_PROFILE', payload: builtProfile });
-      }
-    } catch { /* keep existing */ }
     dispatch({ type: 'SET_PROFILE_LOADING', payload: { quickCard: false } });
 
+    // Single API call — full profile (server cache checked automatically)
     let fullProfile = null;
     try {
       fullProfile = await generateFullProfile(name, institution, state.myProfile);
@@ -67,7 +61,7 @@ export function ProfileView() {
       dispatch({ type: 'SET_ERROR', payload: 'Full profile: ' + err.message });
     }
     if (fullProfile) {
-      builtProfile = { ...builtProfile, ...fullProfile, _generatedForUser: generatedForUser };
+      builtProfile = { ...builtProfile, ...fullProfile, _savedAt: Date.now(), _generatedForUser: generatedForUser };
       dispatch({ type: 'UPDATE_PROFILE_SECTION', payload: fullProfile });
     }
 

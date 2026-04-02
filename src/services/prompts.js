@@ -16,26 +16,13 @@ export function getDisambiguationPrompt(name, hints = {}, myProfile = null) {
   if (hints.conference) ctx.push(`Conference: ${hints.conference}`);
   if (hints.country) ctx.push(`Region: ${hints.country}`);
 
-  const userCtx = myProfile ? ` Searcher: ${getMyProfileSummary(myProfile)}. Prioritize related fields.` : '';
+  const userCtx = myProfile ? ` Searcher: ${getMyProfileSummary(myProfile)}. Prioritize related fields. Make conversation starters reference overlap.` : '';
 
   return {
-    system: 'Find matching professionals. Return ONLY valid JSON array, no fences.',
+    system: 'Find matching professionals and build a quick networking card for each. Be specific, never fabricate. Return ONLY valid JSON array, no fences.',
     user: `Find "${name}". ${ctx.join('. ')}.${userCtx}
-Return: [{"full_name":"","title":"","institution":"","field":"","h_index_approx":null,"distinguishing_detail":"","confidence_score":0.0}]
+Return: [{"full_name":"","title":"","institution":"","department":"","field":"","location":"","h_index_approx":null,"distinguishing_detail":"","confidence_score":0.0,"bio_blurb":"(2-3 sentences)","education":[{"degree":"","institution":"","year":""}],"research_tags":[],"conversation_starters":["specific","specific","specific"]}]
 Max 5. Only JSON.`,
-  };
-}
-
-export function getQuickCardPrompt(name, institution = '', myProfile = null) {
-  const personalized = myProfile
-    ? ` Searcher: ${getMyProfileSummary(myProfile)}. Make conversation starters reference overlap between searcher and this person.`
-    : '';
-
-  return {
-    system: 'Build a networking profile card. Be specific, never fabricate. Return ONLY valid JSON, no fences.',
-    user: `Profile: ${name}${institution ? ` at ${institution}` : ''}.${personalized}
-Return: {"full_name":"","title":"","institution":"","department":"","location":"","bio_blurb":"(3 sentences)","education":[{"degree":"","institution":"","year":""}],"research_tags":[],"conversation_starters":["specific","specific","specific"]}
-Only JSON.`,
   };
 }
 

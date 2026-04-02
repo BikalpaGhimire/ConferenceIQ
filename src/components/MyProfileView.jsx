@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { generateQuickCard, generateFullProfile } from '../services/api';
+import { generateFullProfile } from '../services/api';
 import { Avatar } from './ui/Avatar';
 import { Badge } from './ui/Badge';
 import { ArrowLeft, RefreshCw, Loader2, Edit3, Save, X, LogOut } from 'lucide-react';
@@ -21,11 +21,10 @@ export function MyProfileView() {
     setRefreshing(true);
 
     try {
-      const quickCard = await generateQuickCard(qc.full_name, qc.institution || '').catch(() => null);
       const fullProfile = await generateFullProfile(qc.full_name, qc.institution || '').catch(() => null);
 
       const updated = {
-        quick_card: quickCard || qc,
+        quick_card: qc,
         ...(fullProfile || {}),
         _savedAt: Date.now(),
         _lookingFor: profile?._lookingFor || '',

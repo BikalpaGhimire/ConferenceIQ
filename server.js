@@ -38,6 +38,19 @@ db.exec(`
 // Migration: add last_view column if missing
 try { db.exec('ALTER TABLE users ADD COLUMN last_view TEXT DEFAULT "search"'); } catch {};
 
+// --- Profile Cache Table (7-day TTL) ---
+db.exec(`
+  CREATE TABLE IF NOT EXISTS profile_cache (
+    cache_key TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    institution TEXT DEFAULT '',
+    profile_json TEXT NOT NULL,
+    created_at INTEGER DEFAULT (unixepoch())
+  );
+`);
+
+const CACHE_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+
 function hashPin(pin) {
   return crypto.createHash('sha256').update(pin).digest('hex');
 }
@@ -144,6 +157,38 @@ app.post('/api/sync', (req, res) => {
   params.push(userId);
 
   db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+  res.json({ ok: true });
+});
+
+// --- Profile Cache Endpoints ---
+
+// GET /api/cache?name=...&institution=...
+app.get('/api/cache', (req, res) => {
+  const { name, institution } = req.query;
+  if (!name) return res.status(400).json({ error: 'name required' });
+
+  const cacheKey = `${name.toLowerCase().trim()}|${(institution || '').toLowerCase().trim()}`;
+  const row = db.prepare(
+    'SELECT profile_json, created_at FROM profile_cache WHERE cache_key = ? AND created_at > unixepoch() - ?'
+  ).get(cacheKey, CACHE_TTL_SECONDS);
+
+  if (row) {
+    return res.json({ profile: JSON.parse(row.profile_json), cachedAt: row.created_at });
+  }
+  res.json({ profile: null });
+});
+
+// POST /api/cache — store a profile
+app.post('/api/cache', (req, res) => {
+  const { name, institution, profile } = req.body;
+  if (!name || !profile) return res.status(400).json({ error: 'name and profile required' });
+
+  const cacheKey = `${name.toLowerCase().trim()}|${(institution || '').toLowerCase().trim()}`;
+  db.prepare(`
+    INSERT OR REPLACE INTO profile_cache (cache_key, name, institution, profile_json, created_at)
+    VALUES (?, ?, ?, ?, unixepoch())
+  `).run(cacheKey, name, institution || '', JSON.stringify(profile));
+
   res.json({ ok: true });
 });
 
