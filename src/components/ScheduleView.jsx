@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { disambiguateName, generateQuickCard, generateFullProfile } from '../services/api';
+import { disambiguateName, generateFullProfile } from '../services/api';
 import { Avatar } from './ui/Avatar';
 import { ArrowLeft, CheckSquare, Square, Loader2, Users, Check, AlertCircle } from 'lucide-react';
 
@@ -59,12 +59,11 @@ export function ScheduleView() {
 
         const best = candidates[0];
 
-        // Sequential: Quick Card then Full Profile
-        const quickCard = await generateQuickCard(best.full_name, best.institution, state.myProfile).catch(() => null);
+        // Single API call per person — candidate has quick_card fields from disambiguation
         const fullProfile = await generateFullProfile(best.full_name, best.institution, state.myProfile).catch(() => null);
 
         const profile = {
-          quick_card: quickCard || best,
+          quick_card: best,
           ...(fullProfile || {}),
           _savedAt: Date.now(),
         };

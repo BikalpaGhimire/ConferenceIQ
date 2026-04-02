@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { generateQuickCard, generateFullProfile } from '../services/api';
+import { generateFullProfile } from '../services/api';
 import { Avatar } from './ui/Avatar';
 import { Badge } from './ui/Badge';
 import { getProfileAge } from '../services/storage';

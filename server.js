@@ -38,6 +38,19 @@ db.exec(`
 // Migration: add last_view column if missing
 try { db.exec('ALTER TABLE users ADD COLUMN last_view TEXT DEFAULT "search"'); } catch {};
 
+// --- Profile Cache Table (7-day TTL) ---
+db.exec(`
+  CREATE TABLE IF NOT EXISTS profile_cache (
+    cache_key TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    institution TEXT DEFAULT '',
+    profile_json TEXT NOT NULL,
+    created_at INTEGER DEFAULT (unixepoch())
+  );
+`);
+
+const CACHE_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+
 function hashPin(pin) {
   return crypto.createHash('sha256').update(pin).digest('hex');
 }
@@ -147,11 +160,44 @@ app.post('/api/sync', (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Profile Cache Endpoints ---
+
+// GET /api/cache?name=...&institution=...
+app.get('/api/cache', (req, res) => {
+  const { name, institution } = req.query;
+  if (!name) return res.status(400).json({ error: 'name required' });
+
+  const cacheKey = `${name.toLowerCase().trim()}|${(institution || '').toLowerCase().trim()}`;
+  const row = db.prepare(
+    'SELECT profile_json, created_at FROM profile_cache WHERE cache_key = ? AND created_at > unixepoch() - ?'
+  ).get(cacheKey, CACHE_TTL_SECONDS);
+
+  if (row) {
+    return res.json({ profile: JSON.parse(row.profile_json), cachedAt: row.created_at });
+  }
+  res.json({ profile: null });
+});
+
+// POST /api/cache — store a profile
+app.post('/api/cache', (req, res) => {
+  const { name, institution, profile } = req.body;
+  if (!name || !profile) return res.status(400).json({ error: 'name and profile required' });
+
+  const cacheKey = `${name.toLowerCase().trim()}|${(institution || '').toLowerCase().trim()}`;
+  db.prepare(`
+    INSERT OR REPLACE INTO profile_cache (cache_key, name, institution, profile_json, created_at)
+    VALUES (?, ?, ?, ?, unixepoch())
+  `).run(cacheKey, name, institution || '', JSON.stringify(profile));
+
+  res.json({ ok: true });
+});
+
 // --- Claude API Proxy ---
+// Supports BYOK: client can send x-custom-api-key header to use their own key
 app.post('/api/claude', async (req, res) => {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = req.headers['x-custom-api-key'] || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set' });
+    return res.status(500).json({ error: 'No API key available. Set your own key in Settings or contact the administrator.' });
   }
 
   try {
@@ -167,6 +213,43 @@ app.post('/api/claude', async (req, res) => {
 
     const data = await response.json();
     res.status(response.status).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Gemini API Proxy ---
+// Default provider. Supports BYOK via x-custom-api-key header.
+app.post('/api/gemini', async (req, res) => {
+  const apiKey = req.headers['x-custom-api-key'] || process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: 'No Gemini API key available. Set your own key in Settings or contact the administrator.' });
+  }
+
+  const { model, contents, systemInstruction, tools, generationConfig } = req.body;
+  const geminiModel = model || 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`;
+
+  const body = { contents };
+  if (systemInstruction) body.systemInstruction = systemInstruction;
+  if (tools) body.tools = tools;
+  if (generationConfig) body.generationConfig = generationConfig;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const msg = data?.error?.message || `Gemini API error (${response.status})`;
+      return res.status(response.status).json({ error: msg });
+    }
+
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

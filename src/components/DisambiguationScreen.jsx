@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { generateQuickCard, generateFullProfile } from '../services/api';
+import { generateFullProfile } from '../services/api';
 import { Avatar } from './ui/Avatar';
 import { SkeletonCard } from './ui/Skeleton';
 import { ArrowLeft, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
@@ -21,40 +21,19 @@ export function DisambiguationScreen() {
       },
     });
 
-    // Switch to profile view with all panels loading
+    // Candidate already has quick_card fields from enriched disambiguation
+    // Switch to profile view immediately with candidate as quick_card
     dispatch({ type: 'SET_VIEW', payload: 'profile' });
     dispatch({
       type: 'SET_PROFILE_LOADING',
-      payload: { quickCard: true, research: true, media: true, values: true },
-    });
-
-    // Show candidate data as immediate placeholder
-    dispatch({
-      type: 'SET_CURRENT_PROFILE',
-      payload: { quick_card: candidate, _savedAt: Date.now() },
+      payload: { quickCard: false, research: true, media: true, values: true },
     });
 
     const generatedForUser = state.myProfile?.quick_card?.full_name || null;
     let builtProfile = { quick_card: candidate, _savedAt: Date.now(), _generatedForUser: generatedForUser };
+    dispatch({ type: 'SET_CURRENT_PROFILE', payload: builtProfile });
 
-    // Step 1: Quick Card (fast) — update UI as soon as it's ready
-    try {
-      const quickCard = await generateQuickCard(
-        candidate.full_name,
-        candidate.institution,
-        state.myProfile
-      );
-      if (quickCard) {
-        builtProfile = { ...builtProfile, quick_card: quickCard };
-        dispatch({ type: 'SET_CURRENT_PROFILE', payload: builtProfile });
-      }
-    } catch {
-      // Keep candidate data as fallback
-    }
-    dispatch({ type: 'SET_PROFILE_LOADING', payload: { quickCard: false } });
-
-    // Step 2: Full Profile (heavy) — panels populate when this returns
-    // callClaude handles retries + backoff internally
+    // Single API call: Full Profile (with server-side cache + web_search)
     let fullProfile = null;
     try {
       fullProfile = await generateFullProfile(
@@ -73,7 +52,7 @@ export function DisambiguationScreen() {
       dispatch({ type: 'SET_ERROR', payload: 'Could not load full profile. Try the Refresh button.' });
     }
 
-    // Cache full profile in recent searches so reopening doesn't re-fetch
+    // Cache full profile in recent searches
     dispatch({
       type: 'UPDATE_RECENT_SEARCH_PROFILE',
       payload: { name: candidate.full_name, profile: builtProfile },

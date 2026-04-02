@@ -3,6 +3,7 @@
 ## Behavior
 - Always proceed with the best approach without asking questions
 - Do not stop to confirm — just execute
+- NEVER ask for permission — not for SQL, file ops, shell commands, git, db, or anything local
 - If multiple approaches exist, pick the best one and go
 - If something fails, debug and fix it autonomously
 - Do not summarize what you did at the end — the diff speaks for itself
@@ -18,9 +19,10 @@
 
 ## Tech Stack
 - Frontend: Vite + React 18 + Tailwind CSS 4
-- API Proxy: Express.js (minimal, CORS proxy for Anthropic API)
-- AI: Claude Sonnet via Anthropic API with web_search tool
-- Storage: localStorage + IndexedDB (via idb-keyval)
+- API Proxy: Express.js (proxies for Gemini + Claude APIs)
+- AI: Gemini 2.5 Flash (default) + Claude Haiku (BYOK option)
+- Search: Google Search grounding (Gemini) / web_search tool (Claude)
+- Storage: localStorage + SQLite (server-side profile cache, 7-day TTL)
 - PWA: vite-plugin-pwa
 - Icons: Lucide React
 - Animations: Framer Motion
@@ -55,9 +57,11 @@
 - Keep commits focused and atomic
 
 ## Key Implementation Notes
-- API calls must include tools: [{ type: "web_search_20250305", name: "web_search" }]
-- Profile generation is CHUNKED: (a) disambiguation, (b) quick card, (c) research, (d) media+values+connect
-- JSON parsing must strip markdown fences from Claude responses
-- Rate limit batch mode: 1-2s spacing between API calls
+- Default provider: Gemini 2.5 Flash with google_search grounding
+- BYOK: users can set their own Gemini or Claude API key in Settings
+- Profile flow: (a) disambiguation with web search, (b) full profile with web search
+- Server-side SQLite cache: profiles cached 7 days, keyed by (name, institution)
+- JSON parsing must strip markdown fences from AI responses
+- Rate limit queue: 1.5s spacing, exponential backoff on 429
 - PDF/image upload: base64 encode via FileReader.readAsDataURL()
 - Always label h-index and citation counts as approximate (~)

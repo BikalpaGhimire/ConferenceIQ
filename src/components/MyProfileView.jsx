@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { generateQuickCard, generateFullProfile } from '../services/api';
+import { generateFullProfile } from '../services/api';
 import { Avatar } from './ui/Avatar';
 import { Badge } from './ui/Badge';
-import { ArrowLeft, RefreshCw, Loader2, Edit3, Save, X, LogOut } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, Edit3, Save, X, LogOut, Settings } from 'lucide-react';
 
 export function MyProfileView() {
   const { state, dispatch } = useApp();
@@ -21,11 +21,10 @@ export function MyProfileView() {
     setRefreshing(true);
 
     try {
-      const quickCard = await generateQuickCard(qc.full_name, qc.institution || '').catch(() => null);
       const fullProfile = await generateFullProfile(qc.full_name, qc.institution || '').catch(() => null);
 
       const updated = {
-        quick_card: quickCard || qc,
+        quick_card: qc,
         ...(fullProfile || {}),
         _savedAt: Date.now(),
         _lookingFor: profile?._lookingFor || '',
@@ -201,8 +200,19 @@ export function MyProfileView() {
         )}
       </div>
 
+      {/* Settings */}
+      <div className="mt-6">
+        <button
+          onClick={() => dispatch({ type: 'SET_VIEW', payload: 'settings' })}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-card border border-border rounded-xl text-sm text-muted hover:text-white hover:border-amber/30 transition-colors"
+        >
+          <Settings className="w-4 h-4" />
+          Settings & API Key
+        </button>
+      </div>
+
       {/* Sign Out */}
-      <div className="mt-8 pt-6 border-t border-border">
+      <div className="mt-4 pt-6 border-t border-border">
         <button
           onClick={() => dispatch({ type: 'LOGOUT' })}
           className="w-full flex items-center justify-center gap-2 py-3 bg-danger/10 text-danger rounded-xl text-sm hover:bg-danger/20 transition-colors"
