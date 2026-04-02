@@ -138,8 +138,15 @@ export function OnboardingScreen() {
             Let's set up your profile so we can personalize your experience and show you how you connect with everyone you look up.
           </p>
           <button
+            onClick={() => dispatch({ type: 'SET_VIEW', payload: 'login' })}
+            className="w-full py-3 bg-amber/10 text-amber rounded-xl text-sm font-medium hover:bg-amber/20 transition-colors mb-3 flex items-center justify-center gap-2"
+          >
+            <Lock className="w-4 h-4" />
+            I have a PIN — Log In
+          </button>
+          <button
             onClick={() => setStep('search')}
-            className="w-full py-3 bg-amber/10 text-amber rounded-xl text-sm font-medium hover:bg-amber/20 transition-colors mb-3"
+            className="w-full py-3 bg-card border border-border rounded-xl text-sm text-muted hover:text-white transition-colors mb-3"
           >
             Find My Profile
           </button>
@@ -149,21 +156,13 @@ export function OnboardingScreen() {
           >
             Set Up Manually
           </button>
-          <div className="flex justify-center gap-4 mt-4">
-            <button
-              onClick={() => dispatch({ type: 'SET_VIEW', payload: 'login' })}
-              className="text-xs text-amber hover:underline"
-            >
-              I have a PIN — log in
-            </button>
-            <button
-              onClick={handleSkip}
-              className="text-xs text-muted hover:text-amber transition-colors flex items-center gap-1"
-            >
-              <SkipForward className="w-3 h-3" />
-              Skip
-            </button>
-          </div>
+          <button
+            onClick={handleSkip}
+            className="text-xs text-muted hover:text-amber transition-colors flex items-center gap-1 mx-auto mt-4"
+          >
+            <SkipForward className="w-3 h-3" />
+            Skip for now
+          </button>
         </div>
       )}
 

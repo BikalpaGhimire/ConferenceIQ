@@ -227,7 +227,7 @@ app.post('/api/gemini', async (req, res) => {
   }
 
   const { model, contents, systemInstruction, tools, generationConfig } = req.body;
-  const geminiModel = model || 'gemini-2.5-flash-preview-04-17';
+  const geminiModel = model || 'gemini-2.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`;
 
   const body = { contents };

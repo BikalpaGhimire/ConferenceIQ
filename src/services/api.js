@@ -6,7 +6,7 @@ const GEMINI_URL = '/api/gemini';
 const CACHE_URL = '/api/cache';
 
 const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
-const GEMINI_MODEL = 'gemini-2.5-flash-preview-04-17';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 // --- Provider & BYOK settings ---
 
