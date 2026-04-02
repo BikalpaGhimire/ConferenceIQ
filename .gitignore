@@ -3,4 +3,8 @@ dist
 .env
 *.log
 *.db
+*.db-shm
+*.db-wal
 .claude/
+PROJECT_ANALYSIS_REPORT.md
+PLAN.md
