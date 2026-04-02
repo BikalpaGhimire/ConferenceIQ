@@ -139,13 +139,13 @@ async function setCachedProfile(name, institution, profile) {
   }
 }
 
-// Step 1: Disambiguate a name (NO web_search — uses Claude's training data)
+// Step 1: Disambiguate a name (with web_search for accurate academic lookup)
 export async function disambiguateName(name, hints = {}, myProfile = null) {
   const { system, user } = getDisambiguationPrompt(name, hints, myProfile);
   const response = await callClaude({
     system,
     userMessage: user,
-    // No web_search tool — disambiguation from training data is sufficient
+    tools: [webSearchTool],
     maxTokens: 4096,
   });
 
