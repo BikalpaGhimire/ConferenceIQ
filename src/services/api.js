@@ -4,7 +4,38 @@ import { parseJsonFromResponse } from '../utils/parseJson';
 const API_URL = '/api/claude';
 const MODEL = 'claude-haiku-4-5-20251001';
 
-async function callClaude({ system, userMessage, tools = [], maxTokens = 4096, content = null }) {
+// --- Rate-limit-aware request queue ---
+const queue = {
+  lastCallTime: 0,
+  minSpacing: 2000, // minimum ms between API calls
+  retryAfter: 0,    // timestamp when we can retry after a 429
+};
+
+function getRetryDelay(headers, attempt) {
+  // Exponential backoff: 8s, 20s, 40s
+  const backoffs = [8000, 20000, 40000];
+  return backoffs[Math.min(attempt, backoffs.length - 1)];
+}
+
+async function waitForSlot() {
+  const now = Date.now();
+
+  // If we got a 429 recently, wait until the retry-after window
+  if (queue.retryAfter > now) {
+    const wait = queue.retryAfter - now;
+    await new Promise((r) => setTimeout(r, wait));
+  }
+
+  // Enforce minimum spacing between calls
+  const elapsed = Date.now() - queue.lastCallTime;
+  if (elapsed < queue.minSpacing) {
+    await new Promise((r) => setTimeout(r, queue.minSpacing - elapsed));
+  }
+
+  queue.lastCallTime = Date.now();
+}
+
+async function callClaude({ system, userMessage, tools = [], maxTokens = 4096, content = null, maxRetries = 3 }) {
   const messages = [
     {
       role: 'user',
@@ -23,30 +54,47 @@ async function callClaude({ system, userMessage, tools = [], maxTokens = 4096, c
     body.tools = tools;
   }
 
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    await waitForSlot();
 
-  const data = await response.json().catch(() => null);
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
 
-  if (!response.ok || !data) {
-    // Anthropic errors: { type: "error", error: { type: "...", message: "..." } }
-    const msg = data?.error?.message || data?.message || `API error (${response.status})`;
+    const data = await response.json().catch(() => null);
 
-    if (response.status === 429 || msg.includes('rate limit')) {
+    if (response.status === 429) {
+      const delay = getRetryDelay(response.headers, attempt);
+      console.warn(`Rate limited (attempt ${attempt + 1}/${maxRetries}), waiting ${delay / 1000}s...`);
+      queue.retryAfter = Date.now() + delay;
+      // Increase spacing after a rate limit hit
+      queue.minSpacing = Math.min(queue.minSpacing + 1000, 5000);
+
+      if (attempt < maxRetries - 1) {
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
       throw new Error('Rate limited — please wait a moment and try again.');
     }
 
-    throw new Error(msg);
-  }
+    // Successful call — gradually relax spacing back down
+    if (queue.minSpacing > 2000) {
+      queue.minSpacing = Math.max(queue.minSpacing - 500, 2000);
+    }
 
-  if (!data.content || !Array.isArray(data.content)) {
-    throw new Error('Unexpected API response');
-  }
+    if (!response.ok || !data) {
+      const msg = data?.error?.message || data?.message || `API error (${response.status})`;
+      throw new Error(msg);
+    }
 
-  return data;
+    if (!data.content || !Array.isArray(data.content)) {
+      throw new Error('Unexpected API response');
+    }
+
+    return data;
+  }
 }
 
 function extractTextFromResponse(response) {
@@ -108,6 +156,7 @@ export async function generateFullProfile(name, institution = '', myProfile = nu
     userMessage: user,
     tools: [webSearchTool],
     maxTokens: 8192,
+    maxRetries: 4, // extra retries for the heavy call
   });
 
   const text = extractTextFromResponse(response);

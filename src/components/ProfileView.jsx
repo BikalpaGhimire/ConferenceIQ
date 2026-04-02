@@ -61,15 +61,10 @@ export function ProfileView() {
     dispatch({ type: 'SET_PROFILE_LOADING', payload: { quickCard: false } });
 
     let fullProfile = null;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        fullProfile = await generateFullProfile(name, institution, state.myProfile);
-        if (fullProfile) break;
-      } catch (err) {
-        if (attempt === 0 && err.message?.includes('rate limit')) {
-          await new Promise((r) => setTimeout(r, 5000));
-        }
-      }
+    try {
+      fullProfile = await generateFullProfile(name, institution, state.myProfile);
+    } catch (err) {
+      dispatch({ type: 'SET_ERROR', payload: 'Full profile: ' + err.message });
     }
     if (fullProfile) {
       builtProfile = { ...builtProfile, ...fullProfile, _generatedForUser: generatedForUser };

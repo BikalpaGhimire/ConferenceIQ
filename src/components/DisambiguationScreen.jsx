@@ -54,22 +54,16 @@ export function DisambiguationScreen() {
     dispatch({ type: 'SET_PROFILE_LOADING', payload: { quickCard: false } });
 
     // Step 2: Full Profile (heavy) — panels populate when this returns
-    // Try up to 2 times if first attempt fails
+    // callClaude handles retries + backoff internally
     let fullProfile = null;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        fullProfile = await generateFullProfile(
-          candidate.full_name,
-          candidate.institution,
-          state.myProfile
-        );
-        if (fullProfile) break;
-      } catch (err) {
-        if (attempt === 0 && err.message?.includes('rate limit')) {
-          // Wait 5s and retry once for rate limits
-          await new Promise((r) => setTimeout(r, 5000));
-        }
-      }
+    try {
+      fullProfile = await generateFullProfile(
+        candidate.full_name,
+        candidate.institution,
+        state.myProfile
+      );
+    } catch {
+      // callClaude already retried with exponential backoff
     }
 
     if (fullProfile) {
