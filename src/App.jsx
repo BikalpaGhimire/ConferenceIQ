@@ -11,6 +11,8 @@ import { MyProfileView } from './components/MyProfileView';
 import { SettingsView } from './components/SettingsView';
 import { ErrorBanner } from './components/ui/ErrorBanner';
 import { Avatar } from './components/ui/Avatar';
+import { FloatingDonate } from './components/ui/FloatingDonate';
+import { InstallBanner } from './components/ui/InstallBanner';
 import { debouncedSync } from './services/syncService';
 import { Bookmark, Search, UserCircle } from 'lucide-react';
 
@@ -46,6 +48,7 @@ export default function App() {
     if (currentView === 'login') {
       return (
         <div className="min-h-screen bg-navy">
+          <InstallBanner />
           <ErrorBanner message={error} onDismiss={() => dispatch({ type: 'CLEAR_ERROR' })} />
           <LoginScreen />
         </div>
@@ -53,6 +56,7 @@ export default function App() {
     }
     return (
       <div className="min-h-screen bg-navy">
+        <InstallBanner />
         <ErrorBanner message={error} onDismiss={() => dispatch({ type: 'CLEAR_ERROR' })} />
         <OnboardingScreen />
       </div>
@@ -86,6 +90,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-navy flex flex-col">
+      <InstallBanner />
       <ErrorBanner
         message={error}
         onDismiss={() => dispatch({ type: 'CLEAR_ERROR' })}
@@ -94,6 +99,9 @@ export default function App() {
       <main className="flex-1 max-w-2xl mx-auto w-full">
         {renderView()}
       </main>
+
+      {/* Floating donate button — visible on all pages */}
+      <FloatingDonate />
 
       {/* Bottom navigation */}
       <nav className="sticky bottom-0 bg-surface/80 backdrop-blur-lg border-t border-border">
